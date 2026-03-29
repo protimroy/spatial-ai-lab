@@ -174,7 +174,7 @@ export default function App() {
       const newHeight = Math.max(120, calculatedHeight + 120);
       setHeightB(prev => Math.abs(prev - newHeight) < 0.5 ? prev : newHeight);
     }
-  }, [streamText, mode, font]);
+  }, [streamText, mode]);
 
   const reset = useCallback(() => {
     setStreamText("");
