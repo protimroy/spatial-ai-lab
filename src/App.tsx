@@ -46,7 +46,7 @@ export default function App() {
     return () => cancelAnimationFrame(requestRef);
   }, []);
 
-  // Gemini Live Stream via Cloudflare Worker proxy
+  // Live stream via Cloudflare Worker proxy → OpenAI gpt-4o-mini
   useEffect(() => {
     if (!isStreaming) return;
 

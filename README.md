@@ -1,6 +1,6 @@
 # Spatial AI Lab
 
-A real-time performance benchmark that visualises the layout cost of streaming LLM output. It compares two rendering strategies side-by-side while a live Gemini stream drives the content.
+A real-time performance benchmark that visualises the layout cost of streaming LLM output. It compares two rendering strategies side-by-side while a live OpenAI stream drives the content.
 
 **Live demo:** https://www.protimroy.com/spatial-ai-lab
 
@@ -28,16 +28,16 @@ Cloudflare Worker          Proxy — holds the API key, never exposes it
   └── worker/index.ts
         │
         ▼
-Gemini API (gemini-2.0-flash-lite)
+OpenAI API (gpt-4o-mini)
 ```
 
-The Gemini API key lives exclusively in Cloudflare's encrypted secrets store. It is never embedded in the frontend bundle.
+The OpenAI API key lives exclusively in Cloudflare's encrypted secrets store. It is never embedded in the frontend bundle.
 
 ---
 
 ## Local development
 
-**Prerequisites:** Node 20+, a [Cloudflare account](https://dash.cloudflare.com/sign-up) (free), a [Gemini API key](https://aistudio.google.com/app/apikey).
+**Prerequisites:** Node 20+, a [Cloudflare account](https://dash.cloudflare.com/sign-up) (free), an [OpenAI API key](https://platform.openai.com/api-keys).
 
 ### 1. Install dependencies
 ```bash
@@ -48,7 +48,7 @@ npm install
 ```bash
 npx wrangler login
 npx wrangler deploy --config worker/wrangler.toml
-npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml
+npx wrangler secret put OPENAI_API_KEY --config worker/wrangler.toml
 # paste your key when prompted — it is stored encrypted, not in any file
 ```
 
@@ -65,7 +65,7 @@ npm run dev
 Optionally run the Worker locally instead (no remote calls during dev):
 ```bash
 # Terminal 1
-echo "GEMINI_API_KEY=your_key" > worker/.dev.vars
+echo "OPENAI_API_KEY=your_key" > worker/.dev.vars
 npx wrangler dev --config worker/wrangler.toml
 
 # Terminal 2
@@ -85,7 +85,7 @@ Every push to `master` triggers [`.github/workflows/deploy.yml`](.github/workflo
 | :--- | :--- |
 | `VITE_WORKER_URL` | Your Worker URL from Step 2 above |
 
-No `GEMINI_API_KEY` secret is needed in GitHub — the key lives only in Cloudflare.
+No `OPENAI_API_KEY` secret is needed in GitHub — the key lives only in Cloudflare.
 
 ---
 
