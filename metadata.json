@@ -1,0 +1,5 @@
+{
+  "name": "Spatial AI Whiteboard: DOM vs Pretext",
+  "description": "A performance comparison between traditional DOM-based measurement and Pretext-based text layout for streaming generative UI.",
+  "requestFramePermissions": []
+}
