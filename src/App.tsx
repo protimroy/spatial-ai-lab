@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, RotateCcw, Zap, Layout, Cpu, Info, AlertTriangle, Layers, Activity, Gauge } from 'lucide-react';
 import * as pretext from '@chenglou/pretext';
@@ -146,30 +146,20 @@ export default function App() {
   }, [streamText, mode, stressTest]);
 
   // Scenario B: Pretext Measurement
-  const font = useMemo(() => {
-    try {
-      const p = pretext as any;
-      if (p && typeof p.prepare === 'function') {
-        // pretext.prepare expects (fontName: string, size: number, lineHeight: number)
-        const result = p.prepare('Inter', 16, 1.5);
-        if (result && typeof result === 'object') return result;
-      }
-    } catch (e) {
-      console.warn('Pretext prepare failed', e);
-    }
-    return null;
-  }, []);
-
+  // API: prepare(text: string, font: CSSFontString) → PreparedText
+  //      layout(prepared, maxWidth: number, lineHeight: number) → { lineCount, height }
   useLayoutEffect(() => {
     if (mode === 'pretext') {
       const start = performance.now();
       let calculatedHeight = 0;
       try {
-        if (font && typeof (pretext as any).layout === 'function') {
-          const layout = (pretext as any).layout(font, streamText, 500);
-          calculatedHeight = layout.height || layout;
+        const p = pretext as any;
+        if (typeof p.prepare === 'function' && typeof p.layout === 'function') {
+          const prepared = p.prepare(streamText || ' ', '16px Inter');
+          const result = p.layout(prepared, 500, 24);
+          calculatedHeight = result.height;
         } else {
-          throw new Error("Pretext layout unavailable");
+          throw new Error('Pretext API unavailable');
         }
       } catch (e) {
         // Fallback arithmetic
