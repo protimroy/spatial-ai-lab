@@ -422,7 +422,7 @@ export default function App() {
                     <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
                       <Layers size={16} className="text-white" />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest">Aether Intelligence</span>
+                    <span className="text-xs font-black uppercase tracking-widest">Spatial AI Lab</span>
                   </div>
                   <div className="flex items-center gap-2 bg-black/5 px-3 py-1 rounded-full">
                     <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
