@@ -1,0 +1,14 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# environment variables — NEVER commit these
+.env
+.env.local
+.env.*.local
+
+# Cloudflare Wrangler
+worker/.wrangler/
+worker/.dev.vars

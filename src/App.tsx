@@ -9,44 +9,9 @@ import { Play, RotateCcw, Zap, Layout, Cpu, Info, AlertTriangle, Layers, Activit
 import * as pretext from '@chenglou/pretext';
 import ReactMarkdown from 'react-markdown';
 
-// Complex Lorem Ipsum with diverse structures
-const LOREM_IPSUM_CONTENT = `
-# Lorem Ipsum: Spatial Layout Stress Test
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 
-## 1. Primary Objectives
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. *Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.* Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-### 1.1 Key Performance Indicators (KPIs)
-*   **Throughput:** 500 tokens/sec
-*   **Latency:** < 2ms
-*   **Stability:** 120fps constant
-*   **Precision:** Sub-pixel accuracy
-
-## 2. Structural Complexity Analysis
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-| Component | Traditional | Pretext | Delta |
-| :--- | :--- | :--- | :--- |
-| **Layout Pass** | O(N) DOM | O(1) Math | -99% |
-| **Reflows** | High | Zero | -100% |
-| **Jank** | Visible | None | -100% |
-
-## 3. Extended Narrative
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. 
-
-> "Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt."
-
-### 3.1 Technical Specifications
-1.  **First Item:** Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-2.  **Second Item:** Sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
-3.  **Third Item:** Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur?
-
-## 4. Conclusion
-Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?
-
----
-*Generated for Performance Validation*
-`;
+const STREAM_PROMPT = `Write a detailed technical analysis (~600 words) about spatial layout algorithms in modern AI interfaces. Use rich markdown formatting: headings, bold, italics, bullet lists, a table, and a blockquote. This content is used to stress-test a browser layout performance benchmark.`;
 
 export default function App() {
   const [streamText, setStreamText] = useState("");
@@ -59,7 +24,8 @@ export default function App() {
   const [jankCount, setJankCount] = useState(0);
   const [tokenCount, setTokenCount] = useState(0);
   const [lastReflowTime, setLastReflowTime] = useState(0);
-  
+  const [error, setError] = useState<string | null>(null);
+
   const textRefA = useRef<HTMLDivElement>(null);
   const lastTimeRef = useRef(performance.now());
   const framesRef = useRef(0);
@@ -80,32 +46,76 @@ export default function App() {
     return () => cancelAnimationFrame(requestRef);
   }, []);
 
-  // Simulation Stream - Use setTimeout to prevent overlapping updates
+  // Gemini Live Stream via Cloudflare Worker proxy
   useEffect(() => {
     if (!isStreaming) return;
 
-    const tokens = LOREM_IPSUM_CONTENT.split(/(\s+)/).filter(Boolean);
-    let index = 0;
-    let timeoutId: number;
+    const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined;
+    if (!workerUrl) {
+      setError('VITE_WORKER_URL is not set. Add it to your .env file (see README).');
+      setIsStreaming(false);
+      return;
+    }
 
-    const stream = () => {
-      if (index >= tokens.length) {
-        setIsStreaming(false);
-        return;
-      }
+    let cancelled = false;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
-      const nextToken = tokens[index];
-      setStreamText(prev => prev + nextToken);
-      if (nextToken.trim()) {
-        setTokenCount(prev => prev + 1);
+    const run = async () => {
+      try {
+        setError(null);
+        const response = await fetch(workerUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: STREAM_PROMPT }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Worker error ${response.status}: ${await response.text()}`);
+        }
+
+        reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!cancelled) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const data = line.slice(6).trim();
+            if (!data) continue;
+            try {
+              const json = JSON.parse(data);
+              const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+              if (text) {
+                setStreamText(prev => prev + text);
+                const words = text.trim().split(/\s+/).filter(Boolean);
+                if (words.length > 0) setTokenCount(prev => prev + words.length);
+              }
+            } catch {
+              // skip malformed SSE lines
+            }
+          }
+        }
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Worker request failed');
+        }
+      } finally {
+        reader?.cancel();
+        if (!cancelled) setIsStreaming(false);
       }
-      index++;
-      timeoutId = window.setTimeout(stream, stressTest ? 2 : 15);
     };
 
-    timeoutId = window.setTimeout(stream, stressTest ? 2 : 15);
-    return () => clearTimeout(timeoutId);
-  }, [isStreaming, stressTest]);
+    run();
+    return () => {
+      cancelled = true;
+      reader?.cancel();
+    };
+  }, [isStreaming]);
 
   // Scenario A: Traditional DOM Measurement
   useLayoutEffect(() => {
@@ -181,6 +191,7 @@ export default function App() {
     setJankCount(0);
     setTokenCount(0);
     setLastReflowTime(0);
+    setError(null);
   }, []);
 
   // Reset when switching modes
@@ -200,9 +211,12 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-2xl font-black tracking-tighter italic uppercase">Spatial AI Lab</h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono">Real-time Performance Monitor</p>
+              <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-mono">
+                {GEMINI_MODEL}
+              </span>
             </div>
           </div>
         </div>
@@ -235,12 +249,24 @@ export default function App() {
               {fps}
             </p>
           </div>
-          <button
-            onClick={() => (isStreaming ? setIsStreaming(false) : setIsStreaming(true))}
-            className="w-14 h-14 bg-white text-black rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl shadow-white/10"
-          >
-            {isStreaming ? <RotateCcw size={24} /> : <Play size={24} className="ml-1" />}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={reset}
+              disabled={isStreaming}
+              className="w-10 h-10 bg-white/10 text-white/50 rounded-xl flex items-center justify-center hover:bg-white/20 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
+              title="Reset"
+            >
+              <RotateCcw size={18} />
+            </button>
+            <button
+              onClick={() => setIsStreaming(prev => !prev)}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-2xl ${
+                isStreaming ? 'bg-orange-500 text-black shadow-orange-500/20' : 'bg-white text-black shadow-white/10'
+              }`}
+            >
+              {isStreaming ? <RotateCcw size={24} className="animate-spin" /> : <Play size={24} className="ml-1" />}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -331,10 +357,21 @@ export default function App() {
                 </button>
               </div>
               <p className="text-[10px] text-white/30 italic">
-                Increases stream speed by 6x and reflow pressure by 5x.
+                Increases reflow pressure by 5x.
               </p>
             </div>
           </section>
+
+          {/* Error Card */}
+          {error && (
+            <section className="bg-red-500/10 border border-red-500/30 rounded-3xl p-6 space-y-2">
+              <div className="flex items-center gap-2 text-red-400">
+                <AlertTriangle size={16} />
+                <p className="text-xs font-bold uppercase tracking-widest">API Error</p>
+              </div>
+              <p className="text-xs text-red-300/70 font-mono break-all">{error}</p>
+            </section>
+          )}
 
           {/* Explanation Card */}
           <section className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6">
