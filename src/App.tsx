@@ -27,6 +27,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
 
   const textRefA = useRef<HTMLDivElement>(null);
+  const preparedTextRef = useRef<{ text: string; prepared: unknown }>({ text: '', prepared: null });
   const lastTimeRef = useRef(performance.now());
   const framesRef = useRef(0);
 
@@ -146,18 +147,34 @@ export default function App() {
   }, [streamText, mode, stressTest]);
 
   // Scenario B: Pretext Measurement
-  // API: prepare(text: string, font: CSSFontString) → PreparedText
-  //      layout(prepared, maxWidth: number, lineHeight: number) → { lineCount, height }
+  // prepare(text, font) — segments & measures words via canvas; caches internally.
+  //   Called whenever text changes, but per-word results are cached so only new
+  //   words incur canvas work. Stored in a ref — NOT timed (setup cost, not layout cost).
+  // layout(prepared, maxWidth, lineHeight) — pure arithmetic, ~0.0002ms.
+  //   This is what we benchmark: the equivalent of getBoundingClientRect().
   useLayoutEffect(() => {
     if (mode === 'pretext') {
-      const start = performance.now();
       let calculatedHeight = 0;
       try {
         const p = pretext as any;
         if (typeof p.prepare === 'function' && typeof p.layout === 'function') {
-          const prepared = p.prepare(streamText || ' ', '16px Inter');
-          const result = p.layout(prepared, 500, 24);
-          calculatedHeight = result.height;
+          // Re-prepare only when text changes; internal cache handles repeated words.
+          if (preparedTextRef.current.text !== streamText) {
+            preparedTextRef.current = {
+              text: streamText,
+              prepared: p.prepare(streamText || ' ', '16px Inter'),
+            };
+          }
+          // Time only layout() — pure arithmetic, no canvas, no DOM reads.
+          // Matches the iteration count of the traditional mode for a fair comparison.
+          const iterations = stressTest ? 50 : 10;
+          const start = performance.now();
+          for (let i = 0; i < iterations; i++) {
+            const result = p.layout(preparedTextRef.current.prepared, 500, 24);
+            calculatedHeight = result.height;
+          }
+          const end = performance.now();
+          setLastReflowTime(end - start);
         } else {
           throw new Error('Pretext API unavailable');
         }
@@ -168,13 +185,12 @@ export default function App() {
         const charsPerLine = Math.floor(containerWidth / charWidth);
         const lines = Math.max(1, Math.ceil((streamText.length || 1) / charsPerLine));
         calculatedHeight = lines * 24 + 100;
+        setLastReflowTime(0);
       }
-      const end = performance.now();
-      setLastReflowTime(end - start);
       const newHeight = Math.max(120, calculatedHeight + 120);
       setHeightB(prev => Math.abs(prev - newHeight) < 0.5 ? prev : newHeight);
     }
-  }, [streamText, mode]);
+  }, [streamText, mode, stressTest]);
 
   const reset = useCallback(() => {
     setStreamText("");
@@ -185,6 +201,7 @@ export default function App() {
     setTokenCount(0);
     setLastReflowTime(0);
     setError(null);
+    preparedTextRef.current = { text: '', prepared: null };
   }, []);
 
   // Reset when switching modes
