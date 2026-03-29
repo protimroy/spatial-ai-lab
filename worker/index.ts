@@ -9,6 +9,8 @@
  */
 
 const ALLOWED_ORIGINS = [
+  'https://www.protimroy.com',
+  'https://protimroy.com',
   'https://protimroy.github.io',
   'http://localhost:3000',
   'http://localhost:4173', // vite preview

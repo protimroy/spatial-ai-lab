@@ -148,11 +148,14 @@ export default function App() {
   // Scenario B: Pretext Measurement
   const font = useMemo(() => {
     try {
-      if (pretext && typeof (pretext as any).prepare === 'function') {
-        return (pretext as any).prepare('Inter', 16, 1.5);
+      const p = pretext as any;
+      if (p && typeof p.prepare === 'function') {
+        // pretext.prepare expects (fontName: string, size: number, lineHeight: number)
+        const result = p.prepare('Inter', 16, 1.5);
+        if (result && typeof result === 'object') return result;
       }
     } catch (e) {
-      console.warn("Pretext prepare failed", e);
+      console.warn('Pretext prepare failed', e);
     }
     return null;
   }, []);
