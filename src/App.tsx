@@ -9,7 +9,7 @@ import { Play, RotateCcw, Zap, Layout, Cpu, Info, AlertTriangle, Layers, Activit
 import * as pretext from '@chenglou/pretext';
 import ReactMarkdown from 'react-markdown';
 
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const MODEL_DISPLAY = 'gpt-4o-mini';
 
 const STREAM_PROMPT = `Write a detailed technical analysis (~600 words) about spatial layout algorithms in modern AI interfaces. Use rich markdown formatting: headings, bold, italics, bullet lists, a table, and a blockquote. This content is used to stress-test a browser layout performance benchmark.`;
 
@@ -89,7 +89,7 @@ export default function App() {
             if (!data) continue;
             try {
               const json = JSON.parse(data);
-              const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+              const text: string = json.choices?.[0]?.delta?.content ?? '';
               if (text) {
                 setStreamText(prev => prev + text);
                 const words = text.trim().split(/\s+/).filter(Boolean);
@@ -208,7 +208,7 @@ export default function App() {
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <p className="text-[10px] text-white/40 uppercase tracking-widest font-mono">Real-time Performance Monitor</p>
               <span className="text-[9px] font-black uppercase tracking-widest bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-mono">
-                {GEMINI_MODEL}
+                {MODEL_DISPLAY}
               </span>
             </div>
           </div>

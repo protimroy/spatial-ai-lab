@@ -1,7 +1,7 @@
 /**
- * Cloudflare Worker — Gemini API proxy for spatial-ai-lab.
+ * Cloudflare Worker — OpenAI API proxy for spatial-ai-lab.
  *
- * The GEMINI_API_KEY never reaches the browser; it lives only in
+ * The OPENAI_API_KEY never reaches the browser; it lives only in
  * Cloudflare's encrypted secrets store.
  *
  * Allowed origins are restricted so the key cannot be abused from
@@ -16,10 +16,10 @@ const ALLOWED_ORIGINS = [
   'http://localhost:4173', // vite preview
 ];
 
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 interface Env {
-  GEMINI_API_KEY: string;
+  OPENAI_API_KEY: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -50,7 +50,7 @@ export default {
       return new Response('Forbidden', { status: 403 });
     }
 
-    if (!env.GEMINI_API_KEY) {
+    if (!env.OPENAI_API_KEY) {
       return new Response('Server misconfiguration: API key not set', { status: 500 });
     }
 
@@ -65,31 +65,33 @@ export default {
       return new Response('Missing or invalid "prompt" field', { status: 400 });
     }
 
-    // Proxy the streaming request to Gemini
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`,
+    // Proxy the streaming request to OpenAI
+    const openaiRes = await fetch(
+      'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': env.GEMINI_API_KEY,
+          'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: body.prompt }] }],
+          model: OPENAI_MODEL,
+          stream: true,
+          messages: [{ role: 'user', content: body.prompt }],
         }),
       }
     );
 
-    if (!geminiRes.ok || !geminiRes.body) {
-      const errText = await geminiRes.text();
-      return new Response(`Gemini error: ${errText}`, {
-        status: geminiRes.status,
+    if (!openaiRes.ok || !openaiRes.body) {
+      const errText = await openaiRes.text();
+      return new Response(`OpenAI error: ${errText}`, {
+        status: openaiRes.status,
         headers: corsHeaders(origin),
       });
     }
 
-    // Stream Gemini's SSE response straight back to the browser
-    return new Response(geminiRes.body, {
+    // Stream OpenAI's SSE response straight back to the browser
+    return new Response(openaiRes.body, {
       status: 200,
       headers: {
         'Content-Type': 'text/event-stream',
