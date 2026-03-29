@@ -66,7 +66,7 @@ export default function App() {
         const response = await fetch(workerUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: STREAM_PROMPT }),
+          body: JSON.stringify({}),
         });
 
         if (!response.ok) {

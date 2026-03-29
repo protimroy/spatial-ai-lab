@@ -18,6 +18,10 @@ const ALLOWED_ORIGINS = [
 
 const OPENAI_MODEL = 'gpt-4o-mini';
 
+// Prompt is hardcoded server-side — the browser sends no user-controlled input,
+// eliminating prompt injection and arbitrary API abuse via curl/scripts.
+const FIXED_PROMPT = `Write a detailed technical analysis (~600 words) about spatial layout algorithms in modern AI interfaces. Use rich markdown formatting: headings, bold, italics, bullet lists, a table, and a blockquote. This content is used to stress-test a browser layout performance benchmark.`;
+
 interface Env {
   OPENAI_API_KEY: string;
 }
@@ -54,16 +58,15 @@ export default {
       return new Response('Server misconfiguration: API key not set', { status: 500 });
     }
 
-    let body: { prompt?: unknown };
+    let body: Record<string, unknown>;
     try {
       body = await request.json();
     } catch {
       return new Response('Invalid JSON body', { status: 400 });
     }
 
-    if (!body.prompt || typeof body.prompt !== 'string') {
-      return new Response('Missing or invalid "prompt" field', { status: 400 });
-    }
+    // Ignore any prompt from the client — always use the hardcoded prompt.
+    // This prevents prompt injection and arbitrary API abuse.
 
     // Proxy the streaming request to OpenAI
     const openaiRes = await fetch(
@@ -77,7 +80,7 @@ export default {
         body: JSON.stringify({
           model: OPENAI_MODEL,
           stream: true,
-          messages: [{ role: 'user', content: body.prompt }],
+          messages: [{ role: 'user', content: FIXED_PROMPT }],
         }),
       }
     );
