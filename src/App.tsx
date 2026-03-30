@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, RotateCcw, Zap, Layout, Cpu, Info, AlertTriangle, Layers, Activity, Gauge } from 'lucide-react';
+import { Play, RotateCcw, Zap, Layers, AlertTriangle, Activity, Gauge } from 'lucide-react';
 import * as pretext from '@chenglou/pretext';
 import ReactMarkdown from 'react-markdown';
 
@@ -449,44 +449,10 @@ export default function App() {
                   </ReactMarkdown>
                 </div>
               </motion.div>
-
-              {/* Other UI elements that get pushed */}
-              <motion.div 
-                layout
-                className="mt-12 w-full max-w-[600px] grid grid-cols-2 gap-8"
-              >
-                <div className="h-48 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-4 group-hover:bg-white/10 transition-colors">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
-                    <Cpu size={24} className="text-white/20" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Core Processing</p>
-                </div>
-                <div className="h-48 bg-white/5 border border-white/10 rounded-[2rem] flex flex-col items-center justify-center gap-4 group-hover:bg-white/10 transition-colors">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
-                    <Layout size={24} className="text-white/20" />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/20">Spatial Layout</p>
-                </div>
-              </motion.div>
             </div>
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="max-w-7xl mx-auto p-12 border-t border-white/5 mt-12 flex flex-col md:flex-row justify-between items-center gap-8 opacity-40">
-        <div className="flex items-center gap-4">
-          <Activity size={20} />
-          <div className="text-xs font-mono uppercase tracking-widest">
-            System Status: {isStreaming ? 'Streaming' : 'Standby'}
-          </div>
-        </div>
-        <div className="flex gap-12 text-[10px] uppercase tracking-[0.3em] font-black">
-          <span className="text-red-500">Forced Reflow</span>
-          <span className="text-green-500">Arithmetic Layout</span>
-          <span className="text-white/40">120Hz Optimized</span>
-        </div>
-      </footer>
     </div>
   );
 }
